@@ -152,12 +152,12 @@ static uint8_t getSBoxInvert(uint8_t num)
   return rsbox[num];
 }
 
-// This function produces Nb(Nr+1) round keys. The round keys are used in each round to decrypt the states. 
+// This function produces Nb(Nr+1) round keys. The round keys are used in each round to decrypt the states.
 static void KeyExpansion(void)
 {
   uint32_t i, j, k;
   uint8_t tempa[4]; // Used for the column/row operations
-  
+
   // The first round key is the key itself.
   for(i = 0; i < Nk; ++i)
   {
@@ -188,7 +188,7 @@ static void KeyExpansion(void)
         tempa[3] = k;
       }
 
-      // SubWord() is a function that takes a four-byte input word and 
+      // SubWord() is a function that takes a four-byte input word and
       // applies the S-box to each of the four bytes to produce an output word.
 
       // Function Subword()
@@ -389,8 +389,8 @@ static void Cipher(void)
   uint8_t round = 0;
 
   // Add the First round key to the state before starting the rounds.
-  AddRoundKey(0); 
-  
+  AddRoundKey(0);
+
   // There will be Nr rounds.
   // The first Nr-1 rounds are identical.
   // These Nr-1 rounds are executed in the loop below.
@@ -401,7 +401,7 @@ static void Cipher(void)
     MixColumns();
     AddRoundKey(round);
   }
-  
+
   // The last round is given below.
   // The MixColumns function is not here in the last round.
   SubBytes();
@@ -414,7 +414,7 @@ static void InvCipher(void)
   uint8_t round=0;
 
   // Add the First round key to the state before starting the rounds.
-  AddRoundKey(Nr); 
+  AddRoundKey(Nr);
 
   // There will be Nr rounds.
   // The first Nr-1 rounds are identical.
@@ -426,7 +426,7 @@ static void InvCipher(void)
     AddRoundKey(round);
     InvMixColumns();
   }
-  
+
   // The last round is given below.
   // The MixColumns function is not here in the last round.
   InvShiftRows();
@@ -448,7 +448,7 @@ static void BlockCopy(uint8_t* output, uint8_t* input)
 /*****************************************************************************/
 /* Public functions:                                                         */
 /*****************************************************************************/
-#if defined(ECB) && ECB
+
 
 
 void AES128_ECB_encrypt(uint8_t* input, const uint8_t* key, uint8_t* output)
@@ -478,106 +478,7 @@ void AES128_ECB_decrypt(uint8_t* input, const uint8_t* key, uint8_t *output)
 }
 
 
-#endif // #if defined(ECB) && ECB
 
 
-
-
-
-#if defined(CBC) && CBC
-
-
-static void XorWithIv(uint8_t* buf)
-{
-  uint8_t i;
-  for(i = 0; i < KEYLEN; ++i)
-  {
-    buf[i] ^= Iv[i];
-  }
-}
-
-void AES128_CBC_encrypt_buffer(uint8_t* output, uint8_t* input, uint32_t length, const uint8_t* key, const uint8_t* iv)
-{
-  intptr_t i;
-  uint8_t remainders = length % KEYLEN; /* Remaining bytes in the last non-full block */
-
-  BlockCopy(output, input);
-  state = (state_t*)output;
-
-  // Skip the key expansion if key is passed as 0
-  if(0 != key)
-  {
-    Key = key;
-    KeyExpansion();
-  }
-
-  if(iv != 0)
-  {
-    Iv = (uint8_t*)iv;
-  }
-
-  for(i = 0; i < length; i += KEYLEN)
-  {
-    XorWithIv(input);
-    BlockCopy(output, input);
-    state = (state_t*)output;
-    Cipher();
-    Iv = output;
-    input += KEYLEN;
-    output += KEYLEN;
-  }
-
-  if(remainders)
-  {
-    BlockCopy(output, input);
-    memset(output + remainders, 0, KEYLEN - remainders); /* add 0-padding */
-    state = (state_t*)output;
-    Cipher();
-  }
-}
-
-void AES128_CBC_decrypt_buffer(uint8_t* output, uint8_t* input, uint32_t length, const uint8_t* key, const uint8_t* iv)
-{
-  intptr_t i;
-  uint8_t remainders = length % KEYLEN; /* Remaining bytes in the last non-full block */
-  
-  BlockCopy(output, input);
-  state = (state_t*)output;
-
-  // Skip the key expansion if key is passed as 0
-  if(0 != key)
-  {
-    Key = key;
-    KeyExpansion();
-  }
-
-  // If iv is passed as 0, we continue to encrypt without re-setting the Iv
-  if(iv != 0)
-  {
-    Iv = (uint8_t*)iv;
-  }
-
-  for(i = 0; i < length; i += KEYLEN)
-  {
-    BlockCopy(output, input);
-    state = (state_t*)output;
-    InvCipher();
-    XorWithIv(output);
-    Iv = input;
-    input += KEYLEN;
-    output += KEYLEN;
-  }
-
-  if(remainders)
-  {
-    BlockCopy(output, input);
-    memset(output+remainders, 0, KEYLEN - remainders); /* add 0-padding */
-    state = (state_t*)output;
-    InvCipher();
-  }
-}
-
-
-#endif // #if defined(CBC) && CBC
 
 
